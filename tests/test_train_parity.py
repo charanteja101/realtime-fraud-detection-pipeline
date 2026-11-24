@@ -10,7 +10,6 @@ from fraudstream.train import pick_threshold, replay_features
 from .helpers import StubScorer
 
 
-
 def test_offline_replay_equals_online_processor():
     df = generate(4000, seed=11).sort_values("step", kind="stable").reset_index(drop=True)
     X, y, _ = replay_features(df)

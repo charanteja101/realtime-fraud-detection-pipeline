@@ -154,7 +154,7 @@ def run(settings: Settings | None = None) -> None:  # pragma: no cover - needs K
     ensure_topic(cfg.kafka_bootstrap, cfg.topic, cfg.partitions)
 
     store = PostgresStore(cfg.database_url)
-    for attempt in range(30):
+    for _attempt in range(30):
         try:
             store.init_schema()
             break
