@@ -1,0 +1,42 @@
+{
+  "version": "xgb-20261124-114818",
+  "feature_order": [
+    "hour_of_day",
+    "type_code",
+    "amount",
+    "old_balance_orig",
+    "new_balance_orig",
+    "old_balance_dest",
+    "new_balance_dest",
+    "err_balance_orig",
+    "err_balance_dest",
+    "orig_drained",
+    "amount_eq_old_balance",
+    "dest_is_merchant",
+    "dest_txn_count",
+    "dest_total_in",
+    "dest_avg_amount",
+    "dest_max_amount",
+    "dest_transfer_count",
+    "dest_steps_since_last",
+    "dest_txn_count_24h",
+    "dest_amount_24h",
+    "amount_to_dest_avg"
+  ],
+  "threshold": 0.2554618716239929,
+  "metrics": {
+    "test_rows": 10000,
+    "test_fraud": 81,
+    "pr_auc": 0.9972781393523802,
+    "roc_auc": 0.9999775963078715,
+    "threshold": 0.2554618716239929,
+    "precision": 0.8804347826086957,
+    "recall": 1.0,
+    "tp": 81,
+    "fp": 11,
+    "fn": 0,
+    "best_iteration": 51
+  },
+  "train_rows": 35000,
+  "split": "chronological 70/10/20"
+}
