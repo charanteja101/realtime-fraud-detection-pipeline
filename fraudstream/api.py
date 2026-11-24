@@ -13,6 +13,7 @@ import time
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field
 
 from .model import MissingFeatureError, ModelBundle
@@ -92,6 +93,10 @@ def create_app(bundle: ModelBundle | None = None) -> FastAPI:
     def model_info(request: Request):
         m: ModelBundle = request.app.state.model
         return {"version": m.version, "threshold": m.threshold, "feature_order": m.feature_order}
+
+    @app.get("/", include_in_schema=False)
+    def root():
+        return RedirectResponse("/docs")
 
     return app
 
