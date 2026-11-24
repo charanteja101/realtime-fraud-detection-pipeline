@@ -10,6 +10,8 @@ PaySim transactions are replayed as a live event stream, enriched with **increme
 destination-account history**, scored by an **XGBoost model behind FastAPI**, and landed in
 Postgres, with measured latency/throughput and explicit handling of **duplicate and late events**.
 
+> **Note:** this is an educational / portfolio project built on simulated data. See the [Disclaimer](#disclaimer) at the end.
+
 ```mermaid
 flowchart LR
     CSV[("PaySim CSV")] --> P["Producer<br/>paced replay<br/>+ duplicate / late injection"]
@@ -258,7 +260,7 @@ fraudstream/
   synth.py       PaySim-shaped synthetic data for CI and smoke tests
 ```
 
-## Design trade-offs and limits (worth saying in an interview)
+## Design trade-offs and limits
 
 - **State in Postgres JSONB** keeps the stack small and makes the landing transaction atomic.
   At higher scale you would move hot state to Redis/RocksDB (or use Flink / Kafka Streams state
@@ -275,3 +277,23 @@ fraudstream/
   evidence; the engineering is the point.
 - Not included (natural next steps): schema registry / Avro, dead-letter topic for rejected events,
   Prometheus metrics, model registry and drift monitoring, Kubernetes manifests.
+
+## Disclaimer
+
+This project is provided for educational and demonstration purposes only, as a portfolio piece
+showing streaming, stateful feature computation and model serving.
+
+- **Simulated data.** It uses the PaySim synthetic dataset and a synthetic data generator. No real
+  customer or transaction data is included or used. PaySim is a simulation, so metrics reported
+  here do not reflect how a model would perform on real payment fraud.
+- **Not production-ready.** It is not a fraud-prevention product and must not be used to make real
+  decisions about payments, accounts or people. A production system would need security review,
+  authentication, monitoring, model validation, compliance and privacy controls that are out of
+  scope here.
+- **Public demo.** The hosted API is an unauthenticated demo on a free tier. It may be slow, sleep
+  when idle, change or go offline without notice. Do not send real or sensitive data to it.
+- **Benchmarks.** Performance numbers were measured once on a single development machine and will
+  vary with hardware and configuration.
+- **Third-party data and software.** The PaySim dataset is not redistributed here; download it from
+  Kaggle and follow its license terms. Software is provided "as is", without warranty of any kind
+  (see `LICENSE`).
