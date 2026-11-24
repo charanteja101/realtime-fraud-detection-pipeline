@@ -1,0 +1,113 @@
+# Real-time fraud pipeline: Redpanda (Kafka API) -> processor -> FastAPI model -> Postgres
+x-app-env: &app-env
+  KAFKA_BOOTSTRAP: redpanda:9092
+  KAFKA_TOPIC: transactions
+  KAFKA_PARTITIONS: "4"
+  DATABASE_URL: postgresql://fraud:fraud@postgres:5432/fraud
+  SCORING_URL: http://api:8000
+  ALLOWED_LATENESS_STEPS: "6"
+
+x-app: &app
+  build: .
+  image: fraudstream:local
+  environment: *app-env
+
+services:
+  redpanda:
+    image: docker.redpanda.com/redpandadata/redpanda:v24.2.7
+    command:
+      - redpanda
+      - start
+      - --mode=dev-container
+      - --smp=1
+      - --memory=1G
+      - --reserve-memory=0M
+      - --overprovisioned
+      - --node-id=0
+      - --kafka-addr=internal://0.0.0.0:9092,external://0.0.0.0:19092
+      - --advertise-kafka-addr=internal://redpanda:9092,external://localhost:19092
+    ports:
+      - "19092:19092"
+    volumes:
+      - redpanda-data:/var/lib/redpanda/data
+    healthcheck:
+      test: ["CMD-SHELL", "rpk cluster health | grep -E 'Healthy:.+true' || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: fraud
+      POSTGRES_PASSWORD: fraud
+      POSTGRES_DB: fraud
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fraud -d fraud"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  api:
+    <<: *app
+    command: ["uvicorn", "fraudstream.api:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]
+    environment:
+      <<: *app-env
+      MODEL_PATH: /app/models/model.json
+      MODEL_META_PATH: /app/models/model_meta.json
+    volumes:
+      - ./models:/app/models:ro
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://localhost:8000/health', timeout=2)"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+
+  processor:
+    <<: *app
+    command: ["python", "-m", "fraudstream.processor"]
+    depends_on:
+      redpanda: {condition: service_healthy}
+      postgres: {condition: service_healthy}
+      api: {condition: service_healthy}
+    restart: unless-stopped
+
+  # one-shot: replay a PaySim CSV into Kafka.   docker compose run --rm producer
+  producer:
+    <<: *app
+    profiles: ["replay"]
+    command:
+      - python
+      - -m
+      - fraudstream.producer
+      - --data=/data/${DATA_FILE:-PS_20174392719_1491204439457_log.csv}
+      - --rate=${RATE:-2000}
+      - --limit=${LIMIT:-0}
+      - --run-id=${RUN_ID:-ps}
+      - --dup-rate=${DUP_RATE:-0}
+      - --late-rate=${LATE_RATE:-0}
+      - --late-steps=${LATE_STEPS:-12}
+    volumes:
+      - ./data:/data:ro
+    depends_on:
+      redpanda: {condition: service_healthy}
+
+  # one-shot tools: train, synth, report, bench_api.   docker compose run --rm tools python -m ...
+  tools:
+    <<: *app
+    profiles: ["tools"]
+    command: ["python", "-m", "fraudstream.report"]
+    volumes:
+      - ./data:/data
+      - ./models:/app/models
+
+volumes:
+  pgdata:
+  redpanda-data:
